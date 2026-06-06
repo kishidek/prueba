@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora con Fórmulas</title>
+<title>Calculadora Gráfica</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -13,8 +13,22 @@
     min-height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 16px;
+    align-items: flex-start;
+    padding: 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  /* --- Calculator Section --- */
+  .calc-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .calc {
     background: #1a1a24;
@@ -23,6 +37,7 @@
     width: 100%;
     max-width: 380px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    flex-shrink: 0;
   }
   .display {
     background: #12121a;
@@ -34,7 +49,7 @@
   }
   .display .formula {
     font-size: 16px;
-    color: #888;
+    color: #b088ff;
     min-height: 24px;
     word-break: break-all;
     font-family: 'Courier New', monospace;
@@ -54,20 +69,19 @@
   }
   .formula-btn {
     flex: 1;
-    padding: 8px 4px;
+    padding: 10px 4px;
     border: none;
     border-radius: 8px;
     background: #2a1f4a;
     color: #b088ff;
     font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.15s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  .formula-btn:hover { background: #3a2f6a; }
+  .formula-btn:hover { background: #3a2f6a; color: #cc99ff; }
   .formula-btn:active { transform: scale(0.97); }
+  .formula-btn.active { background: #4a2dcc; color: #fff; box-shadow: 0 0 12px rgba(74,45,204,0.4); }
   .buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -83,6 +97,7 @@
     transition: all 0.12s;
     background: #2a2a38;
     color: #e0e0e0;
+    user-select: none;
   }
   .btn:hover { background: #3a3a4a; }
   .btn:active { transform: scale(0.95); }
@@ -96,202 +111,513 @@
   .btn-clear:hover { background: #4a2a2a; }
   .btn-del { background: #2a1a1a; color: #ff8844; }
   .btn-del:hover { background: #3a2a2a; }
-  .btn-span2 { grid-column: span 2; }
   footer {
     margin-top: 12px;
     text-align: center;
     font-size: 11px;
     color: #555;
   }
+
+  /* --- Graph Section --- */
+  .graph-panel {
+    background: #1a1a24;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    flex: 1;
+    min-width: 300px;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+  }
+  .graph-panel .graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .graph-panel .graph-title {
+    color: #888;
+    font-size: 13px;
+  }
+  .graph-panel .graph-formula-label {
+    color: #b088ff;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+  }
+  .graph-canvas-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 260px;
+  }
+  .graph-canvas-wrap canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background: #12121a;
+    display: block;
+  }
+  .graph-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-size: 14px;
+    border-radius: 12px;
+    background: #12121a;
+    pointer-events: none;
+  }
+  .graph-placeholder .icon { font-size: 40px; margin-bottom: 8px; opacity: 0.3; }
+
+  @media (max-width: 780px) {
+    .calc-row { flex-direction: column; align-items: center; }
+    .graph-panel { min-height: 280px; }
+  }
 </style>
 </head>
 <body>
-<div class="calc">
-  <div class="display">
-    <div class="formula" id="formulaDisplay"></div>
-    <div class="result" id="resultDisplay">0</div>
+<div class="container">
+  <div class="calc-row">
+    <!-- Calculator -->
+    <div class="calc">
+      <div class="display">
+        <div class="formula" id="formulaDisplay"></div>
+        <div class="result" id="resultDisplay">0</div>
+      </div>
+      <div class="formula-buttons">
+        <button class="formula-btn" data-fdisplay="√(a² + b²)" data-feval="sqrt(a^2 + b^2)" data-vars='{"a":3,"b":4}' data-graph="triangle">Pitágoras</button>
+        <button class="formula-btn" data-fdisplay="π × r²" data-feval="pi * r^2" data-vars='{"r":5}' data-graph="circle">Área círculo</button>
+        <button class="formula-btn" data-fdisplay="(−b ± √(b²−4ac))/2a" data-feval="(-b + sqrt(b^2 - 4*a*c)) / (2*a)" data-vars='{"a":1,"b":-3,"c":2}' data-graph="parabola">Ecuación 2º</button>
+      </div>
+      <div class="buttons" id="buttonsGrid">
+        <button class="btn btn-clear" data-action="clear">C</button>
+        <button class="btn btn-del" data-action="del">⌫</button>
+        <button class="btn btn-paren" data-action="paren">( )</button>
+        <button class="btn btn-op" data-action="op">÷</button>
+        <button class="btn" data-action="num">7</button>
+        <button class="btn" data-action="num">8</button>
+        <button class="btn" data-action="num">9</button>
+        <button class="btn btn-op" data-action="op">×</button>
+        <button class="btn" data-action="num">4</button>
+        <button class="btn" data-action="num">5</button>
+        <button class="btn" data-action="num">6</button>
+        <button class="btn btn-op" data-action="op">−</button>
+        <button class="btn" data-action="num">1</button>
+        <button class="btn" data-action="num">2</button>
+        <button class="btn" data-action="num">3</button>
+        <button class="btn btn-op" data-action="op">+</button>
+        <button class="btn" data-action="num">0</button>
+        <button class="btn" data-action="num">.</button>
+        <button class="btn btn-op" data-action="op">^</button>
+        <button class="btn btn-eq" data-action="eq">=</button>
+      </div>
+      <footer>Click una fórmula → calcula + grafica</footer>
+    </div>
+
+    <!-- Graph Panel -->
+    <div class="graph-panel">
+      <div class="graph-header">
+        <span class="graph-title">Gráfico</span>
+        <span class="graph-formula-label" id="graphFormulaLabel"></span>
+      </div>
+      <div class="graph-canvas-wrap">
+        <canvas id="graphCanvas"></canvas>
+        <div class="graph-placeholder" id="graphPlaceholder">
+          <div class="icon">📈</div>
+          <div>Presiona un botón de fórmula</div>
+          <div style="font-size:11px;margin-top:4px;color:#555;">para ver su gráfico</div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <div class="formula-buttons">
-    <button class="formula-btn" data-formula="sqrt(a^2 + b^2)" data-vars='{"a":3,"b":4}'>Pitágoras</button>
-    <button class="formula-btn" data-formula="pi * r^2" data-vars='{"r":5}'>Área círculo</button>
-    <button class="formula-btn" data-formula="(-b + sqrt(b^2 - 4*a*c)) / (2*a)" data-vars='{"a":1,"b":-3,"c":2}'>Ecuación 2º</button>
-  </div>
-
-  <div class="buttons" id="buttonsGrid">
-    <button class="btn btn-clear" data-action="clear">C</button>
-    <button class="btn btn-del" data-action="del">⌫</button>
-    <button class="btn btn-paren" data-action="paren">( )</button>
-    <button class="btn btn-op" data-action="op">÷</button>
-
-    <button class="btn" data-action="num">7</button>
-    <button class="btn" data-action="num">8</button>
-    <button class="btn" data-action="num">9</button>
-    <button class="btn btn-op" data-action="op">×</button>
-
-    <button class="btn" data-action="num">4</button>
-    <button class="btn" data-action="num">5</button>
-    <button class="btn" data-action="num">6</button>
-    <button class="btn btn-op" data-action="op">−</button>
-
-    <button class="btn" data-action="num">1</button>
-    <button class="btn" data-action="num">2</button>
-    <button class="btn" data-action="num">3</button>
-    <button class="btn btn-op" data-action="op">+</button>
-
-    <button class="btn" data-action="num">0</button>
-    <button class="btn" data-action="num">.</button>
-    <button class="btn btn-op" data-action="op">^</button>
-    <button class="btn btn-eq" data-action="eq">=</button>
-  </div>
-  <footer>Visualización de fórmulas • π √ ()</footer>
 </div>
 
 <script>
-  const formulaDisplay = document.getElementById('formulaDisplay');
-  const resultDisplay = document.getElementById('resultDisplay');
+  // ---- DOM refs ----
+  const formulaDisplay  = document.getElementById('formulaDisplay');
+  const resultDisplay   = document.getElementById('resultDisplay');
+  const graphCanvas     = document.getElementById('graphCanvas');
+  const graphPlaceholder= document.getElementById('graphPlaceholder');
+  const graphLabel      = document.getElementById('graphFormulaLabel');
+
   let expression = '';
   let evaluated = false;
 
+  // ---- Calculator helpers ----
   function updateDisplay() {
     formulaDisplay.textContent = expression || ' ';
-    if (expression === '') {
-      resultDisplay.textContent = '0';
-    }
+    if (expression === '') resultDisplay.textContent = '0';
   }
 
-  function insertText(text) {
-    if (evaluated && !'+-×÷^'.includes(text)) {
-      expression = '';
-      evaluated = false;
-    }
-    if (evaluated && '+-×÷^'.includes(text)) {
-      evaluated = false;
-    }
-    expression += text;
+  function insertText(t) {
+    if (evaluated && !'+-×÷^'.includes(t)) { expression = ''; evaluated = false; }
+    if (evaluated && '+-×÷^'.includes(t)) evaluated = false;
+    expression += t;
     evaluated = false;
     updateDisplay();
   }
 
-  function evaluateExpression(expr) {
+  function evalExpr(expr) {
     let e = expr
-      .replace(/×/g, '*')
-      .replace(/÷/g, '/')
-      .replace(/−/g, '-')
-      .replace(/\^/g, '**')
-      .replace(/sqrt\(/g, 'Math.sqrt(')
-      .replace(/pi/g, 'Math.PI');
-
-    if (!/^[0-9+\-*/.()%\s,Math\w]+$/.test(e)) {
-      throw new Error('Expresión inválida');
-    }
-
-    const result = Function('"use strict"; return (' + e + ')')();
-    return result;
+      .replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-')
+      .replace(/\^/g,'**').replace(/sqrt\(/g,'Math.sqrt(').replace(/pi/g,'Math.PI');
+    if (!/^[0-9+\-*/.()%\s,Math\w]+$/.test(e)) throw Error('inválida');
+    return Function('"use strict"; return (' + e + ')')();
   }
 
   function handleEquals() {
     if (!expression) return;
     try {
-      const result = evaluateExpression(expression);
-      const display = typeof result === 'number' && !Number.isInteger(result)
-        ? result.toFixed(6).replace(/\.?0+$/, '')
-        : String(result);
-      resultDisplay.textContent = display;
+      const r = evalExpr(expression);
+      const d = typeof r === 'number' && !Number.isInteger(r)
+        ? parseFloat(r.toFixed(8)).toString() : String(r);
+      resultDisplay.textContent = d;
       evaluated = true;
-    } catch {
-      resultDisplay.textContent = 'Error';
-      evaluated = true;
-    }
+    } catch { resultDisplay.textContent = 'Error'; evaluated = true; }
   }
 
-  function handleClear() {
-    expression = '';
-    evaluated = false;
-    resultDisplay.textContent = '0';
-    updateDisplay();
-  }
-
-  function handleDelete() {
-    if (evaluated) { handleClear(); return; }
-    expression = expression.slice(0, -1);
-    updateDisplay();
-  }
-
+  function handleClear() { expression = ''; evaluated = false; resultDisplay.textContent = '0'; updateDisplay(); }
+  function handleDel() { if (evaluated) { handleClear(); return; } expression = expression.slice(0,-1); updateDisplay(); }
   function handleParen() {
     if (evaluated) { expression = ''; evaluated = false; }
-    const open = (expression.match(/\(/g) || []).length;
-    const close = (expression.match(/\)/g) || []).length;
-    if (open > close && expression.slice(-1) !== '(') {
-      expression += ')';
-    } else {
-      const last = expression.slice(-1);
-      if (last && /[0-9)]/.test(last)) expression += '*';
+    const op = (expression.match(/\(/g)||[]).length;
+    const cl = (expression.match(/\)/g)||[]).length;
+    if (op > cl && expression.slice(-1) !== '(') { expression += ')'; } else {
+      if (expression.slice(-1) && /[0-9)]/.test(expression.slice(-1))) expression += '*';
       expression += '(';
     }
     updateDisplay();
   }
 
+  // ---- Formula buttons ----
   document.querySelectorAll('.formula-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      let formula = btn.dataset.formula;
-      const rawVars = btn.dataset.vars;
-      if (rawVars) {
-        const vals = JSON.parse(rawVars);
-        for (const [k, v] of Object.entries(vals)) {
-          formula = formula.replace(new RegExp('\\b' + k + '\\b', 'g'), v);
-        }
+      document.querySelectorAll('.formula-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const displayF = btn.dataset.fdisplay;
+      const evalF    = btn.dataset.feval;
+      const rawVars  = btn.dataset.vars;
+      const graph    = btn.dataset.graph;
+      const vals     = rawVars ? JSON.parse(rawVars) : {};
+
+      // Show pretty formula in display (with substituted values shown)
+      let pretty = displayF;
+      for (const [k, v] of Object.entries(vals)) {
+        pretty = pretty.replace(new RegExp('\\b' + k + '\\b', 'g'), v);
       }
-      expression = formula;
+      formulaDisplay.textContent = pretty;
+
+      // Evaluate the formula with values
+      let evalStr = evalF;
+      for (const [k, v] of Object.entries(vals)) {
+        evalStr = evalStr.replace(new RegExp('\\b' + k + '\\b', 'g'), v);
+      }
+      expression = evalStr;
       evaluated = false;
       updateDisplay();
+      formulaDisplay.textContent = pretty;
       handleEquals();
+
+      // Draw graph
+      graphLabel.textContent = displayF;
+      drawGraph(graph, vals);
     });
   });
 
+  // ---- Graph drawing ----
+  function resizeCanvas() {
+    const wrap = graphCanvas.parentElement;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    graphCanvas.width = w * devicePixelRatio;
+    graphCanvas.height = h * devicePixelRatio;
+    graphCanvas.style.width = w + 'px';
+    graphCanvas.style.height = h + 'px';
+    return { w, h };
+  }
+
+  function drawGraph(type, vars) {
+    graphPlaceholder.style.display = 'none';
+    const { w, h } = resizeCanvas();
+    const ctx = graphCanvas.getContext('2d');
+    const dpr = devicePixelRatio;
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Margins
+    const pad = { t: 20, r: 20, b: 30, l: 40 };
+    const gw = w - pad.l - pad.r;
+    const gh = h - pad.t - pad.b;
+
+    switch (type) {
+      case 'triangle': drawTriangle(ctx, pad, gw, gh, vars); break;
+      case 'circle':   drawCircle(ctx, pad, gw, gh, vars);   break;
+      case 'parabola': drawParabola(ctx, pad, gw, gh, vars); break;
+    }
+  }
+
+  // ---- Triangle (Pythagoras) ----
+  function drawTriangle(ctx, pad, gw, gh, vars) {
+    const { a = 3, b = 4 } = vars;
+    const c = Math.sqrt(a*a + b*b);
+    const scale = Math.min(gw, gh) / (Math.max(a, b) * 1.8);
+    const ox = pad.l + gw * 0.25;
+    const oy = pad.t + gh * 0.85;
+
+    const ax = ox;
+    const ay = oy;
+    const bx = ox + a * scale;
+    const by = oy;
+    const cx = ox;
+    const cy = oy - b * scale;
+
+    // Fill
+    ctx.fillStyle = 'rgba(74,45,204,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo(cx, cy);
+    ctx.closePath(); ctx.fill();
+
+    // Sides
+    ctx.strokeStyle = '#7a5dff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.moveTo(ax, ay); ctx.lineTo(cx, cy); ctx.moveTo(bx, by); ctx.lineTo(cx, cy);
+    ctx.stroke();
+
+    // Right angle marker
+    const sz = 10;
+    ctx.strokeStyle = '#44ddbb';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ax + sz, ay); ctx.lineTo(ax + sz, ay - sz); ctx.lineTo(ax, ay - sz);
+    ctx.stroke();
+
+    // Labels
+    ctx.fillStyle = '#ffcc44';
+    ctx.font = 'bold 15px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('a=' + a, (ax+bx)/2, ay + 8);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('b=' + b, ax - 10, (ay+cy)/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#ff6688';
+    ctx.fillText('c=' + c.toFixed(2), (bx+cx)/2, (by+cy)/2 - 8);
+
+    // Result below
+    ctx.fillStyle = '#b088ff';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('c = √(a² + b²) = ' + c.toFixed(5), pad.l + gw/2, pad.t + gh + 14);
+  }
+
+  // ---- Circle (Area) ----
+  function drawCircle(ctx, pad, gw, gh, vars) {
+    const { r = 5 } = vars;
+    const cx = pad.l + gw * 0.45;
+    const cy = pad.t + gh * 0.50;
+    const radius = Math.min(gw, gh) * 0.35;
+
+    // Grid / crosshair
+    ctx.strokeStyle = '#2a2a3a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, cy); ctx.lineTo(pad.l+gw, cy);
+    ctx.moveTo(cx, pad.t); ctx.lineTo(cx, pad.t+gh);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Circle
+    ctx.fillStyle = 'rgba(74,45,204,0.12)';
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#7a5dff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke();
+
+    // Radius line
+    ctx.strokeStyle = '#ffcc44';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.stroke();
+
+    // Center dot
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+
+    // r label
+    ctx.fillStyle = '#ffcc44';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('r = ' + r, cx + radius/2, cy - 4);
+
+    // π r² formula + result
+    const area = Math.PI * r * r;
+    ctx.fillStyle = '#b088ff';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('A = π × ' + r + '² = ' + area.toFixed(4), pad.l + gw/2, pad.t + gh + 14);
+
+    // π decoration
+    ctx.fillStyle = '#444';
+    ctx.font = '40px serif';
+    ctx.globalAlpha = 0.15;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('π', cx, cy);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- Parabola (Quadratic) ----
+  function drawParabola(ctx, pad, gw, gh, vars) {
+    const { a = 1, b = -3, c = 2 } = vars;
+
+    // Solve for vertex and find good range
+    const vertexX = -b / (2 * a);
+    const vertexY = a * vertexX * vertexX + b * vertexX + c;
+
+    // Roots
+    const disc = b*b - 4*a*c;
+    let xMin, xMax;
+    if (disc >= 0) {
+      const r1 = (-b - Math.sqrt(disc)) / (2*a);
+      const r2 = (-b + Math.sqrt(disc)) / (2*a);
+      xMin = Math.min(r1, r2) - 2;
+      xMax = Math.max(r1, r2) + 2;
+    } else {
+      xMin = vertexX - 3;
+      xMax = vertexX + 3;
+    }
+
+    // Also consider vertex
+    const range = Math.max(xMax - xMin, 4);
+    const cxR = (xMin + xMax) / 2;
+
+    // Y range
+    const yAtLeft  = a*xMin*xMin + b*xMin + c;
+    const yAtRight = a*xMax*xMax + b*xMax + c;
+    let yMin = Math.min(vertexY, 0, yAtLeft, yAtRight) - 1;
+    let yMax = Math.max(vertexY, 0, yAtLeft, yAtRight) + 1;
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+
+    function toCanvas(x, y) {
+      return {
+        px: pad.l + ((x - xMin) / (xMax - xMin)) * gw,
+        py: pad.t + gh - ((y - yMin) / (yMax - yMin)) * gh
+      };
+    }
+
+    // ---- Grid ----
+    ctx.strokeStyle = '#2a2a3a';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    // Y=0 axis
+    if (yMin < 0 && yMax > 0) {
+      const { px: p1, py } = toCanvas(xMin, 0);
+      const { px: p2 } = toCanvas(xMax, 0);
+      ctx.beginPath(); ctx.moveTo(p1, py); ctx.lineTo(p2, py); ctx.stroke();
+    }
+    // X=0 axis
+    if (xMin < 0 && xMax > 0) {
+      const { px, py: p1 } = toCanvas(0, yMin);
+      const { py: p2 } = toCanvas(0, yMax);
+      ctx.beginPath(); ctx.moveTo(px, p1); ctx.lineTo(px, p2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // ---- Plot parabola ----
+    ctx.strokeStyle = '#7a5dff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const steps = 200;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = xMin + t * (xMax - xMin);
+      const y = a*x*x + b*x + c;
+      const { px, py } = toCanvas(x, y);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // ---- Roots ----
+    if (disc >= 0) {
+      const r1 = (-b - Math.sqrt(disc)) / (2*a);
+      const r2 = (-b + Math.sqrt(disc)) / (2*a);
+      for (const root of [r1, r2]) {
+        const { px, py } = toCanvas(root, 0);
+        ctx.fillStyle = '#ff6688';
+        ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff6688';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText('x=' + root.toFixed(2), px, py + 6);
+      }
+    }
+
+    // ---- Vertex ----
+    const v = toCanvas(vertexX, vertexY);
+    ctx.fillStyle = '#44ddbb';
+    ctx.beginPath(); ctx.arc(v.px, v.py, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#44ddbb';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = vertexY < 0 ? 'top' : 'bottom';
+    ctx.fillText('v(' + vertexX.toFixed(2) + ',' + vertexY.toFixed(2) + ')', v.px + 6, v.py + (vertexY < 0 ? 6 : -6));
+
+    // ---- Formula label at bottom ----
+    const signA = a >= 0 ? '' : '-';
+    const absA = Math.abs(a);
+    const aStr = absA === 1 ? signA : signA + absA;
+    ctx.fillStyle = '#b088ff';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const disc2 = b*b - 4*a*c;
+    ctx.fillText('y = ' + aStr + 'x² ' + (b >= 0 ? '+' : '') + b + 'x ' + (c >= 0 ? '+' : '') + c,
+      pad.l + gw/2, pad.t + gh + 14);
+  }
+
+  // ---- Button grid events ----
   document.getElementById('buttonsGrid').addEventListener('click', (e) => {
     const btn = e.target.closest('.btn');
     if (!btn) return;
-    const action = btn.dataset.action;
-
-    switch (action) {
-      case 'num':
-        insertText(btn.textContent);
-        break;
-      case 'op':
-        insertText(btn.textContent);
-        break;
-      case 'paren':
-        handleParen();
-        break;
-      case 'eq':
-        handleEquals();
-        break;
-      case 'clear':
-        handleClear();
-        break;
-      case 'del':
-        handleDelete();
-        break;
+    switch (btn.dataset.action) {
+      case 'num':   insertText(btn.textContent); break;
+      case 'op':    insertText(btn.textContent); break;
+      case 'paren': handleParen(); break;
+      case 'eq':    handleEquals(); break;
+      case 'clear': handleClear(); break;
+      case 'del':   handleDel(); break;
     }
   });
 
+  // ---- Keyboard ----
   document.addEventListener('keydown', (e) => {
-    if (/^[0-9.]$/.test(e.key)) {
-      insertText(e.key);
-    } else if (['+', '-', '*', '/', '^'].includes(e.key)) {
-      const map = { '*': '×', '/': '÷', '-': '−' };
-      insertText(map[e.key] || e.key);
-    } else if (e.key === '(' || e.key === ')') {
-      handleParen();
-    } else if (e.key === 'Enter' || e.key === '=') {
-      e.preventDefault();
-      handleEquals();
-    } else if (e.key === 'Backspace') {
-      handleDelete();
-    } else if (e.key === 'Escape') {
-      handleClear();
-    }
+    if (/^[0-9.]$/.test(e.key)) { insertText(e.key); }
+    else if (['+','-','*','/','^'].includes(e.key)) {
+      const m = { '*':'×', '/':'÷', '-':'−' };
+      insertText(m[e.key]||e.key);
+    } else if (e.key === '(' || e.key === ')') { handleParen(); }
+    else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); handleEquals(); }
+    else if (e.key === 'Backspace') { handleDel(); }
+    else if (e.key === 'Escape') { handleClear(); }
+  });
+
+  // ---- Resize handler ----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const active = document.querySelector('.formula-btn.active');
+      if (active) {
+        drawGraph(active.dataset.graph, JSON.parse(active.dataset.vars || '{}'));
+      }
+    }, 200);
   });
 
   updateDisplay();
