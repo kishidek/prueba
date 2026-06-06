@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora con Fórmulas</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f13;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .calc {
+    background: #1a1a24;
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .display {
+    background: #12121a;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    min-height: 80px;
+    text-align: right;
+  }
+  .display .formula {
+    font-size: 16px;
+    color: #888;
+    min-height: 24px;
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+  }
+  .display .result {
+    font-size: 32px;
+    font-weight: 600;
+    color: #fff;
+    min-height: 40px;
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+  }
+  .formula-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .formula-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 8px;
+    background: #2a1f4a;
+    color: #b088ff;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .formula-btn:hover { background: #3a2f6a; }
+  .formula-btn:active { transform: scale(0.97); }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .btn {
+    padding: 16px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+    background: #2a2a38;
+    color: #e0e0e0;
+  }
+  .btn:hover { background: #3a3a4a; }
+  .btn:active { transform: scale(0.95); }
+  .btn-op { background: #2d2d1a; color: #ffcc44; }
+  .btn-op:hover { background: #3d3d2a; }
+  .btn-paren { background: #1a2d2a; color: #44ddbb; }
+  .btn-paren:hover { background: #2a3d3a; }
+  .btn-eq { background: #4a2dcc; color: #fff; }
+  .btn-eq:hover { background: #5a3ddc; }
+  .btn-clear { background: #3a1a1a; color: #ff6666; }
+  .btn-clear:hover { background: #4a2a2a; }
+  .btn-del { background: #2a1a1a; color: #ff8844; }
+  .btn-del:hover { background: #3a2a2a; }
+  .btn-span2 { grid-column: span 2; }
+  footer {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+<div class="calc">
+  <div class="display">
+    <div class="formula" id="formulaDisplay"></div>
+    <div class="result" id="resultDisplay">0</div>
+  </div>
+
+  <div class="formula-buttons">
+    <button class="formula-btn" data-formula="sqrt(a^2 + b^2)" data-vars='{"a":3,"b":4}'>Pitágoras</button>
+    <button class="formula-btn" data-formula="pi * r^2" data-vars='{"r":5}'>Área círculo</button>
+    <button class="formula-btn" data-formula="(-b + sqrt(b^2 - 4*a*c)) / (2*a)" data-vars='{"a":1,"b":-3,"c":2}'>Ecuación 2º</button>
+  </div>
+
+  <div class="buttons" id="buttonsGrid">
+    <button class="btn btn-clear" data-action="clear">C</button>
+    <button class="btn btn-del" data-action="del">⌫</button>
+    <button class="btn btn-paren" data-action="paren">( )</button>
+    <button class="btn btn-op" data-action="op">÷</button>
+
+    <button class="btn" data-action="num">7</button>
+    <button class="btn" data-action="num">8</button>
+    <button class="btn" data-action="num">9</button>
+    <button class="btn btn-op" data-action="op">×</button>
+
+    <button class="btn" data-action="num">4</button>
+    <button class="btn" data-action="num">5</button>
+    <button class="btn" data-action="num">6</button>
+    <button class="btn btn-op" data-action="op">−</button>
+
+    <button class="btn" data-action="num">1</button>
+    <button class="btn" data-action="num">2</button>
+    <button class="btn" data-action="num">3</button>
+    <button class="btn btn-op" data-action="op">+</button>
+
+    <button class="btn" data-action="num">0</button>
+    <button class="btn" data-action="num">.</button>
+    <button class="btn btn-op" data-action="op">^</button>
+    <button class="btn btn-eq" data-action="eq">=</button>
+  </div>
+  <footer>Visualización de fórmulas • π √ ()</footer>
+</div>
+
+<script>
+  const formulaDisplay = document.getElementById('formulaDisplay');
+  const resultDisplay = document.getElementById('resultDisplay');
+  let expression = '';
+  let evaluated = false;
+
+  function updateDisplay() {
+    formulaDisplay.textContent = expression || ' ';
+    if (expression === '') {
+      resultDisplay.textContent = '0';
+    }
+  }
+
+  function insertText(text) {
+    if (evaluated && !'+-×÷^'.includes(text)) {
+      expression = '';
+      evaluated = false;
+    }
+    if (evaluated && '+-×÷^'.includes(text)) {
+      evaluated = false;
+    }
+    expression += text;
+    evaluated = false;
+    updateDisplay();
+  }
+
+  function evaluateExpression(expr) {
+    let e = expr
+      .replace(/×/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/−/g, '-')
+      .replace(/\^/g, '**')
+      .replace(/sqrt\(/g, 'Math.sqrt(')
+      .replace(/pi/g, 'Math.PI');
+
+    if (!/^[0-9+\-*/.()%\s,Math\w]+$/.test(e)) {
+      throw new Error('Expresión inválida');
+    }
+
+    const result = Function('"use strict"; return (' + e + ')')();
+    return result;
+  }
+
+  function handleEquals() {
+    if (!expression) return;
+    try {
+      const result = evaluateExpression(expression);
+      const display = typeof result === 'number' && !Number.isInteger(result)
+        ? result.toFixed(6).replace(/\.?0+$/, '')
+        : String(result);
+      resultDisplay.textContent = display;
+      evaluated = true;
+    } catch {
+      resultDisplay.textContent = 'Error';
+      evaluated = true;
+    }
+  }
+
+  function handleClear() {
+    expression = '';
+    evaluated = false;
+    resultDisplay.textContent = '0';
+    updateDisplay();
+  }
+
+  function handleDelete() {
+    if (evaluated) { handleClear(); return; }
+    expression = expression.slice(0, -1);
+    updateDisplay();
+  }
+
+  function handleParen() {
+    if (evaluated) { expression = ''; evaluated = false; }
+    const open = (expression.match(/\(/g) || []).length;
+    const close = (expression.match(/\)/g) || []).length;
+    if (open > close && expression.slice(-1) !== '(') {
+      expression += ')';
+    } else {
+      const last = expression.slice(-1);
+      if (last && /[0-9)]/.test(last)) expression += '*';
+      expression += '(';
+    }
+    updateDisplay();
+  }
+
+  document.querySelectorAll('.formula-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      let formula = btn.dataset.formula;
+      const rawVars = btn.dataset.vars;
+      if (rawVars) {
+        const vals = JSON.parse(rawVars);
+        for (const [k, v] of Object.entries(vals)) {
+          formula = formula.replace(new RegExp('\\b' + k + '\\b', 'g'), v);
+        }
+      }
+      expression = formula;
+      evaluated = false;
+      updateDisplay();
+      handleEquals();
+    });
+  });
+
+  document.getElementById('buttonsGrid').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+    const action = btn.dataset.action;
+
+    switch (action) {
+      case 'num':
+        insertText(btn.textContent);
+        break;
+      case 'op':
+        insertText(btn.textContent);
+        break;
+      case 'paren':
+        handleParen();
+        break;
+      case 'eq':
+        handleEquals();
+        break;
+      case 'clear':
+        handleClear();
+        break;
+      case 'del':
+        handleDelete();
+        break;
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (/^[0-9.]$/.test(e.key)) {
+      insertText(e.key);
+    } else if (['+', '-', '*', '/', '^'].includes(e.key)) {
+      const map = { '*': '×', '/': '÷', '-': '−' };
+      insertText(map[e.key] || e.key);
+    } else if (e.key === '(' || e.key === ')') {
+      handleParen();
+    } else if (e.key === 'Enter' || e.key === '=') {
+      e.preventDefault();
+      handleEquals();
+    } else if (e.key === 'Backspace') {
+      handleDelete();
+    } else if (e.key === 'Escape') {
+      handleClear();
+    }
+  });
+
+  updateDisplay();
+</script>
+</body>
+</html>
